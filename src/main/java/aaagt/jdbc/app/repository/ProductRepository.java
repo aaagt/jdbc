@@ -1,41 +1,24 @@
 package aaagt.jdbc.app.repository;
 
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcOperations;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.TypedQuery;
 import org.springframework.stereotype.Repository;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Repository
 public class ProductRepository {
 
-    private final NamedParameterJdbcOperations template;
-
-    public ProductRepository(NamedParameterJdbcOperations template) {
-        this.template = template;
-    }
-
-    private static String read(String scriptFileName) {
-        try (InputStream is = new ClassPathResource(scriptFileName).getInputStream();
-             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(is))) {
-            return bufferedReader.lines().collect(Collectors.joining("\n"));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public List<String> getProductName(String name) {
-        var script = read("myScript.sql");
-        Map<String, Object> params = new HashMap<>();
-        params.put("name", name.toLowerCase());
-        return template.queryForList(script, params, String.class);
+        final var sql = "SELECT o.productName FROM Order o WHERE lower(customer.name) = :name";
+        TypedQuery<String> query = entityManager.createQuery(sql, String.class)
+                .setParameter("name", name.toLowerCase());
+        List<String> result = query.getResultList();
+        return result;
     }
 
 }
